@@ -7,10 +7,7 @@ import sys
 class Spider(object):
 
     def __init__(self, url, user, passwd):
-        if url[-1] == '/':
-            self.url = url
-        else:
-            self.url = '%s/'%url
+        self.url = url if url[-1] == '/' else '%s/'%url
         self.user = user
         self.passwd = passwd
         self.session = requests.session()
