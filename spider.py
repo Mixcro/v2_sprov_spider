@@ -4,14 +4,6 @@ import requests
 import sys
 
 
-### config ###
-url = 'http://meow.earth:10000'
-user = 'mixcro'
-passwd = 'passwd'
-month_traffic_limit = 64*1024**3  # 单用户月流量限制，单位是byte
-
-
-
 class Spider(object):
 
     def __init__(self, url, user, passwd):
@@ -41,6 +33,8 @@ class Spider(object):
             raise Exception("%s Network ERROR!" % r.status_code)
 
     def logout(self):
+        url = '%ssprov-ui/restart'%self.url
+        self.session.post(url)
         url = '%slogout/'%self.url
         self.session.get(url)
 
@@ -114,64 +108,60 @@ class Spider(object):
 
 
 if __name__ == '__main__':
+    # init_config(config_path='./config.json'):
+    with open('./config.json', 'r') as f:
+        config = json.load(f)
+    url = config['server']['server_url']
+    user = config['server']['user']
+    passwd = config['server']['password']
+
+    # CUI
     test_spider = Spider(url, user, passwd)
     if len(sys.argv) > 1:
         if sys.argv[1] == 'reset':
-            if sys.argv[2] == 'all':
-                try:
-                    test_spider.login()
-                    test_spider.get_accounts()
-                    for account in test_spider.accounts.keys():
-                        test_spider.ctl_enable_account(account)
-                        test_spider.ctl_reset_account(account)
-                    test_spider.logout()
-                except Exception as e:
-                    test_spider.logout()
-                    raise(e)
-            else:
-                try:
-                    test_spider.login()
-                    test_spider.get_accounts()
-                    test_spider.ctl_enable_account('inbound-%s' % sys.argv[2])
-                    test_spider.ctl_reset_account('inbound-%s'%sys.argv[2])
-                    test_spider.logout()
-                except Exception as e:
-                    test_spider.logout()
-                    raise(e)
+            try:
+                test_spider.login()
+                test_spider.get_accounts()
+                account_list = test_spider.accounts.keys() if sys.argv[2] == 'all' else ['inbound-%s'%sys.argv[2]]
+                for account in account_list:
+                    test_spider.ctl_enable_account(account)
+                    test_spider.ctl_reset_account(account)
+                    print('RESET %s'%account)
+                test_spider.logout()
+            except Exception as e:
+                test_spider.logout()
+                raise e
         elif sys.argv[1] == 'check':
-            if sys.argv[2] == 'all':
-                try:
-                    test_spider.login()
-                    test_spider.get_accounts()
-                    for account in test_spider.accounts.keys():
-                        if test_spider.accounts[account]['downlink']+test_spider.accounts[account][
-                                                         'uplink']>month_traffic_limit:
-                            test_spider.ctl_disable_account(account)
-                    test_spider.logout()
-                except Exception as e:
-                    test_spider.logout()
-                    raise(e)
-            else:
-                try:
-                    test_spider.login()
-                    test_spider.get_accounts()
-                    account = 'inbound-%s'%sys.argv[2]
-                    if test_spider.accounts[account]['downlink'] + test_spider.accounts[account][
-                                                     'uplink'] > month_traffic_limit:
+
+            def check_traffic(account, downlink, uplink):
+                if account[8:] in config['traffic_limit']['accounts'].keys():
+                    limit = config['traffic_limit']['accounts'][account[8:]]
+                else:
+                    limit = config['traffic_limit']['default_limit']
+                return False if uplink + downlink < limit or limit == 0 else True
+
+            try:
+                test_spider.login()
+                test_spider.get_accounts()
+                account_list = test_spider.accounts.keys() if sys.argv[2] == 'all' else ['inbound-%s'%sys.argv[2]]
+                for account in account_list:
+                    account_downlink = test_spider.accounts[account]['downlink']
+                    account_uplink = test_spider.accounts[account]['uplink']
+                    if check_traffic(account, account_downlink, account_uplink):
                         test_spider.ctl_disable_account(account)
-                    test_spider.logout()
-                except Exception as e:
-                    test_spider.logout()
-                    raise(e)
+                    print('TRAFFIC CHECK %s: uplink %.3f G | downlink %.3f G' %(account,
+                                                                                account_uplink/1024**3,
+                                                                                account_downlink/1024**3))
+                test_spider.logout()
+            except Exception as e:
+                test_spider.logout()
+                raise e
     else:
-        print(
-            '''
+        print('''
 USAGE: ./spider.py [cmd] [target]
     [cmd]: reset, check
     [target]: all, [user port]
 EXAMPLE:
     ./spider.py reset all      # reset all user traffic
     ./spider.py check all      # check all user traffic and auto ban overload user
-    ./spider.py reset 59603    # reset user's traffic whois port is 59603
-            '''
-        )
+    ./spider.py reset 59603    # reset user's traffic whois port is 59603''')

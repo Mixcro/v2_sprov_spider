@@ -1,0 +1,14 @@
+{
+	"server": {
+		"server_url": "http://meow.earth:10000",
+		"user": "mixcro",
+		"password": "passwd"
+	},
+	"traffic_limit": {
+		"default_limit": 68719476736,
+		"accounts": {
+			"59603": 0,
+			"10086": 1024
+		}
+	}
+}

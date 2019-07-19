@@ -4,8 +4,6 @@
 ## TODO
 1. add comments for the code;
 2. add log file;
-3. add config file;
-4. add std output;
 
 ## first run
 ```
