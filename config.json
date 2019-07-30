@@ -1,8 +1,8 @@
 {
 	"server": {
-		"server_url": "http://meow.earth:10000",
-		"user": "mixcro",
-		"password": "passwd"
+		"server_url": "server_url",
+		"user": "user",
+		"password": "password"
 	},
 	"traffic_limit": {
 		"default_limit": 68719476736,
@@ -10,5 +10,9 @@
 			"59603": 0,
 			"10086": 1024
 		}
+	},
+	"log": {
+		"level": "info",
+		"file": "/var/log/vss.log"
 	}
 }
