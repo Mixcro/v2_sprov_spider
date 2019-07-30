@@ -3,7 +3,6 @@
 
 ## TODO
 1. add comments for the code;
-2. add log file;
 
 ## First run
 ```
