@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import requests
 import sys
 
@@ -32,8 +33,8 @@ class Spider(object):
     def logout(self):
         url = '%ssprov-ui/restart'%self.url
         self.session.post(url)
-        url = '%slogout/'%self.url
-        self.session.get(url)
+        # url = '%slogout/'%self.url
+        # self.session.get(url)
 
     def get_server_status(self):
         url = '%sserver/status'%self.url
@@ -111,21 +112,28 @@ if __name__ == '__main__':
     url = config['server']['server_url']
     user = config['server']['user']
     passwd = config['server']['password']
+    log_level = {"info": logging.INFO}
+    logging.basicConfig(filename=config['log']['file'],
+                        level=log_level[config['log']['level']],
+                        format='%(asctime)s  %(levelname)s:%(message)s')
 
     # CUI
     test_spider = Spider(url, user, passwd)
     if len(sys.argv) > 1:
         if sys.argv[1] == 'reset':
             try:
+                logging.info('Get argv: %s %s' % (sys.argv[1], sys.argv[2]))
                 test_spider.login()
                 test_spider.get_accounts()
                 account_list = test_spider.accounts.keys() if sys.argv[2] == 'all' else ['inbound-%s'%sys.argv[2]]
                 for account in account_list:
                     test_spider.ctl_enable_account(account)
                     test_spider.ctl_reset_account(account)
-                    print('RESET %s'%account)
+                    print('RESET %s' % account)
+                    logging.info('RESET %s' % account)
                 test_spider.logout()
             except Exception as e:
+                logging.error(e)
                 test_spider.logout()
                 raise e
         elif sys.argv[1] == 'check':
@@ -138,19 +146,26 @@ if __name__ == '__main__':
                 return False if uplink + downlink < limit or limit == 0 else True
 
             try:
+                logging.info('Get argv: %s %s' % (sys.argv[1], sys.argv[2]))
                 test_spider.login()
                 test_spider.get_accounts()
                 account_list = test_spider.accounts.keys() if sys.argv[2] == 'all' else ['inbound-%s'%sys.argv[2]]
                 for account in account_list:
                     account_downlink = test_spider.accounts[account]['downlink']
                     account_uplink = test_spider.accounts[account]['uplink']
-                    if check_traffic(account, account_downlink, account_uplink):
-                        test_spider.ctl_disable_account(account)
                     print('TRAFFIC CHECK %s: uplink %.3f G | downlink %.3f G' %(account,
                                                                                 account_uplink/1024**3,
                                                                                 account_downlink/1024**3))
+                    logging.info('TRAFFIC CHECK %s: uplink %.3f G | downlink %.3f G' %(account,
+                                                                                       account_uplink/1024**3,
+                                                                                       account_downlink/1024**3))
+                    if check_traffic(account, account_downlink, account_uplink):
+                        test_spider.ctl_disable_account(account)
+                        logging.info('BANNED %s' % account)
+                        print('BANNED %s' % account)
                 test_spider.logout()
             except Exception as e:
+                logging.error(e)
                 test_spider.logout()
                 raise e
     else:
